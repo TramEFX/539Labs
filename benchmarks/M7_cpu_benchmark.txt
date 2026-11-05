@@ -1,0 +1,8 @@
+SHA3-512 CPU Benchmark
+Platform: Python hashlib
+Input size: 64 bytes
+Iterations: 100,000
+
+Total time:    0.095 s
+Throughput:    1,054,719 hashes/sec  (1.055 MH/s)
+Latency:       0.9481 us/hash

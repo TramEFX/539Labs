@@ -1,0 +1,18 @@
+---
+pid: 10308
+cwd: "E:\539labs"
+command: "Remove-Item Env:HQH539_USE_XSIM -ErrorAction SilentlyContinue; cd E:\\539Labs\\demo; python app.py"
+started_at: 2026-06-10T08:10:20.973Z
+running_for_ms: 11939995 
+---
+ * Serving Flask app 'app'
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5391
+Press CTRL+C to quit
+ * Restarting with stat
+ * Debug mode: on
+ * Debugger is active!
+ * Debugger PIN: 133-444-370
+127.0.0.1 - - [10/Jun/2026 03:10:28] "GET /api/get_mode HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 03:10:28] "POST /api/hash HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 03:10:28] "POST /api/set_mode HTTP/1.1" 400 -

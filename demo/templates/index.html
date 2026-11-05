@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HQH-539 · Demonstration Engine · 539 Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
+  <style>
+    /* ── Root tokens ─────────────────────────────────────────── */
+    :root {
+      --bg:        #070a0d;
+      --surface:   #0d1117;
+      --surface-2: #161b22;
+      --border:    rgba(48, 54, 61, 0.9);
+      --border-hi: rgba(0, 212, 170, 0.35);
+      --accent:    #00d4aa;
+      --accent-dim:#00a882;
+      --gold:      #f4c430;
+      --purple:    #a78bfa;
+      --danger:    #ff4d6d;
+      --warning:   #f59e0b;
+      --success:   #22c55e;
+      --text-1:    #e6edf3;
+      --text-2:    #8b949e;
+      --text-3:    #58626b;
+      --mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      --sans: 'Inter', system-ui, sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text-1);
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+      margin: 0;
+    }
+
+    /* ── Header ──────────────────────────────────────────────── */
+    .site-header {
+      background: linear-gradient(135deg, #0d1117 0%, #0e1520 50%, #0d1117 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1.5rem 0 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .site-header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+    .header-inner { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+    .header-logo {
+      display: flex; align-items: baseline; gap: 0.75rem; margin-bottom: 0.25rem;
+    }
+    .logo-primary {
+      font-family: var(--mono);
+      font-size: 2rem; font-weight: 600; color: var(--accent);
+      letter-spacing: -0.02em;
+      text-shadow: 0 0 30px rgba(0, 212, 170, 0.4);
+    }
+    .logo-dot { color: var(--text-3); font-size: 1.5rem; }
+    .logo-secondary {
+      font-family: var(--mono); font-size: 0.9rem; color: var(--text-2);
+      letter-spacing: 0.1em; text-transform: uppercase;
+    }
+    .header-sub {
+      font-size: 0.78rem; color: var(--text-3); margin-bottom: 1rem;
+      font-family: var(--mono);
+    }
+    .header-sub strong { color: var(--text-2); }
+    .stats-bar {
+      display: flex; border-top: 1px solid var(--border); margin-top: 0.5rem;
+    }
+    .stat-item {
+      flex: 1; padding: 0.6rem 1rem;
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 0.1rem;
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-label {
+      font-size: 0.68rem; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .stat-value {
+      font-family: var(--mono); font-size: 0.85rem;
+      font-weight: 600; color: var(--accent);
+    }
+    .stat-value.gold   { color: var(--gold); }
+    .stat-value.purple { color: var(--purple); }
+    .stat-value.green  { color: var(--success); }
+
+    /* ── Tab nav ─────────────────────────────────────────────── */
+    .tab-nav {
+      max-width: 1100px; margin: 1.5rem auto 0;
+      padding: 0 1.5rem; display: flex; gap: 0.25rem;
+    }
+    .tab-btn {
+      background: none; border: 1px solid transparent; border-radius: 6px;
+      color: var(--text-2); cursor: pointer; font-family: var(--sans);
+      font-size: 0.85rem; font-weight: 500; padding: 0.45rem 1rem;
+      transition: all 0.15s ease;
+    }
+    .tab-btn:hover { background: var(--surface-2); color: var(--text-1); }
+    .tab-btn.active {
+      background: rgba(0, 212, 170, 0.1);
+      border-color: var(--border-hi); color: var(--accent);
+    }
+
+    /* ── Main / panels ───────────────────────────────────────── */
+    .main { max-width: 1100px; margin: 1.25rem auto 3rem; padding: 0 1.5rem; }
+    .panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 1.5rem; margin-bottom: 1rem;
+    }
+    .panel-title {
+      font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-3); margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .panel-title::before {
+      content: ''; display: inline-block; width: 3px; height: 12px;
+      background: var(--accent); border-radius: 2px;
+    }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ── Form elements ───────────────────────────────────────── */
+    label.field-label {
+      display: block; font-size: 0.75rem; font-weight: 500;
+      color: var(--text-2); text-transform: uppercase;
+      letter-spacing: 0.06em; margin-bottom: 0.35rem;
+    }
+    textarea.field, input.field, select.field {
+      width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text-1); font-family: var(--sans);
+      font-size: 0.88rem; padding: 0.6rem 0.8rem; outline: none;
+      transition: border-color 0.15s;
+    }
+    textarea.field { resize: vertical; }
+    textarea.field:focus, input.field:focus, select.field:focus {
+      border-color: rgba(0, 212, 170, 0.5);
+      box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.08);
+    }
+    select.field option { background: var(--surface-2); }
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    .btn-primary {
+      background: var(--accent); border: none; border-radius: 6px;
+      color: #030a08; cursor: pointer; font-family: var(--sans);
+      font-size: 0.85rem; font-weight: 600; padding: 0.55rem 1.25rem;
+      transition: all 0.15s ease; letter-spacing: 0.01em;
+    }
+    .btn-primary:hover { background: #00f5c4; box-shadow: 0 0 16px rgba(0, 212, 170, 0.3); }
+    .btn-primary:active { background: var(--accent-dim); }
+    .btn-secondary {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text-2); cursor: pointer;
+      font-family: var(--sans); font-size: 0.78rem; font-weight: 500;
+      padding: 0.35rem 0.8rem; transition: all 0.15s ease;
+    }
+    .btn-secondary:hover { border-color: rgba(0, 212, 170, 0.3); color: var(--text-1); }
+    .btn-success {
+      background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.4);
+      border-radius: 6px; color: var(--success); cursor: pointer;
+      font-family: var(--sans); font-size: 0.85rem; font-weight: 600;
+      padding: 0.55rem 1.25rem; transition: all 0.15s ease;
+    }
+    .btn-success:hover { background: rgba(34, 197, 94, 0.25); }
+
+    /* ── Hex output boxes ────────────────────────────────────── */
+    .hex-box {
+      background: #050708; border: 1px solid var(--border); border-radius: 6px;
+      color: var(--accent); font-family: var(--mono); font-size: 0.78rem;
+      line-height: 1.7; padding: 0.65rem 0.85rem;
+      word-break: break-all; position: relative;
+    }
+    .hex-wrapper { position: relative; margin-bottom: 0.75rem; }
+    .copy-btn {
+      position: absolute; top: 0.35rem; right: 0.35rem;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 4px; color: var(--text-3); cursor: pointer;
+      font-size: 0.68rem; padding: 0.15rem 0.4rem; transition: all 0.15s;
+      font-family: var(--mono);
+    }
+    .copy-btn:hover { color: var(--accent); border-color: var(--border-hi); }
+    .copy-btn.copied { color: var(--success); border-color: rgba(34,197,94,0.4); }
+
+    /* ── Badges ──────────────────────────────────────────────── */
+    .badge-a {
+      background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.35);
+      border-radius: 4px; color: var(--success);
+      font-size: 0.68rem; font-weight: 600; padding: 0.1rem 0.4rem;
+    }
+    .badge-b {
+      background: rgba(167, 139, 250, 0.15); border: 1px solid rgba(167, 139, 250, 0.35);
+      border-radius: 4px; color: var(--purple);
+      font-size: 0.68rem; font-weight: 600; padding: 0.1rem 0.4rem;
+    }
+    .badge-risk {
+      background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 4px; color: var(--warning);
+      font-size: 0.68rem; font-weight: 600; padding: 0.1rem 0.4rem;
+    }
+    .badge-pending {
+      background: rgba(139, 148, 158, 0.1); border: 1px solid rgba(139, 148, 158, 0.3);
+      border-radius: 4px; color: var(--text-2);
+      font-size: 0.68rem; font-weight: 600; padding: 0.1rem 0.4rem;
+    }
+    .badge-phase {
+      background: rgba(0, 212, 170, 0.08); border: 1px solid rgba(0, 212, 170, 0.2);
+      border-radius: 4px; color: var(--accent);
+      font-size: 0.72rem; font-weight: 500; padding: 0.15rem 0.55rem;
+    }
+    .badge-phase.gold {
+      background: rgba(244, 196, 48, 0.08); border-color: rgba(244, 196, 48, 0.2);
+      color: var(--gold);
+    }
+
+    /* ── Hardware mode UI ─────────────────────────────────────── */
+    .hw-mode-bar {
+      display: none;
+      align-items: center; gap: 0.75rem;
+      padding: 0.5rem 0.9rem; margin-bottom: 0.75rem;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 6px; font-size: 0.78rem;
+    }
+    .hw-mode-bar.visible { display: flex; }
+    .hw-mode-label {
+      color: var(--text-3); font-size: 0.72rem;
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .hw-toggle-track {
+      position: relative; display: inline-block;
+      width: 40px; height: 20px; cursor: pointer;
+    }
+    .hw-toggle-track input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .hw-toggle-thumb {
+      position: absolute; inset: 0; border-radius: 20px;
+      background: var(--surface); border: 1px solid var(--border);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .hw-toggle-thumb::after {
+      content: ''; position: absolute; left: 2px; top: 2px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--text-3); transition: transform 0.2s, background 0.2s;
+    }
+    .hw-toggle-track input:checked + .hw-toggle-thumb {
+      background: rgba(0, 212, 170, 0.15);
+      border-color: rgba(0, 212, 170, 0.5);
+    }
+    .hw-toggle-track input:checked + .hw-toggle-thumb::after {
+      transform: translateX(20px); background: var(--accent);
+    }
+    .hw-mode-text { color: var(--text-2); font-family: var(--mono); font-size: 0.78rem; }
+    .hw-mode-text.active { color: var(--accent); }
+    .hw-badge {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      background: rgba(0, 212, 170, 0.1); border: 1px solid rgba(0, 212, 170, 0.3);
+      border-radius: 4px; color: var(--accent);
+      font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.5rem;
+      font-family: var(--mono);
+    }
+    .hw-timing {
+      display: none;
+      font-size: 0.72rem; color: var(--text-3); font-family: var(--mono);
+      padding: 0.5rem 0.75rem; margin-bottom: 0.5rem;
+      background: rgba(0, 212, 170, 0.04);
+      border: 1px solid rgba(0, 212, 170, 0.12); border-radius: 6px;
+    }
+    .hw-timing.visible { display: block; }
+    .hw-timing span { color: var(--accent); }
+    #hash-trace-na {
+      display: none;
+      font-size: 0.75rem; color: var(--text-3); font-style: italic;
+      margin-bottom: 0.4rem;
+    }
+
+    /* ── Hamming stat ────────────────────────────────────────── */
+    .hamming-stat {
+      display: flex; align-items: center; gap: 1.5rem;
+      padding: 1rem 1.25rem; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: 8px; margin-bottom: 1rem;
+    }
+    .hamming-num {
+      font-family: var(--mono); font-size: 2.5rem;
+      font-weight: 600; line-height: 1;
+    }
+    .hamming-num.good { color: var(--success); }
+    .hamming-num.ok   { color: var(--gold); }
+    .hamming-label {
+      font-size: 0.72rem; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .hamming-pct { font-family: var(--mono); font-size: 1.1rem; color: var(--text-2); }
+
+    /* ── Benchmark grid ──────────────────────────────────────── */
+    .bench-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 1rem; margin-bottom: 1rem;
+    }
+    .bench-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 1rem 1.25rem;
+    }
+    .bench-card-label {
+      font-size: 0.7rem; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;
+    }
+    .bench-card-main {
+      font-family: var(--mono); font-size: 1.4rem; font-weight: 600;
+      color: var(--text-1); line-height: 1.1; margin-bottom: 0.2rem;
+    }
+    .bench-card-main.gold { color: var(--gold); }
+    .bench-card-sub { font-size: 0.75rem; color: var(--text-3); }
+
+    /* ── Data table ──────────────────────────────────────────── */
+    .data-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .data-table th {
+      color: var(--text-3); font-size: 0.7rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 0.5rem 0.75rem; text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table td {
+      padding: 0.55rem 0.75rem; color: var(--text-2);
+      border-bottom: 1px solid rgba(48, 54, 61, 0.4);
+    }
+    .data-table td:first-child { color: var(--text-1); }
+    .data-table tbody tr:last-child td { border-bottom: none; }
+
+    /* ── Alerts ──────────────────────────────────────────────── */
+    .alert-success {
+      background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 6px; color: var(--success); padding: 0.75rem 1rem;
+    }
+    .alert-danger {
+      background: rgba(255, 77, 109, 0.08); border: 1px solid rgba(255, 77, 109, 0.3);
+      border-radius: 6px; color: var(--danger); padding: 0.75rem 1rem;
+    }
+    .note {
+      font-size: 0.75rem; color: var(--text-3); line-height: 1.5;
+      padding: 0.75rem 1rem; background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border); border-radius: 6px; margin-top: 1rem;
+    }
+    .note strong { color: var(--text-2); }
+
+    /* ── Collapsible ─────────────────────────────────────────── */
+    .collapsible-header {
+      display: flex; align-items: center; gap: 0.5rem; cursor: pointer;
+      font-size: 0.78rem; color: var(--text-3); user-select: none;
+    }
+    .collapsible-header:hover { color: var(--text-2); }
+    .collapsible-header .chevron { transition: transform 0.2s; font-style: normal; }
+    .collapsible-header.open .chevron { transform: rotate(90deg); }
+    .collapsible-body { display: none; margin-top: 0.75rem; }
+    .collapsible-body.open { display: block; }
+
+    /* ── Layout helpers ──────────────────────────────────────── */
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .flex-row { display: flex; align-items: flex-start; gap: 0.75rem; flex-wrap: wrap; }
+    .flex-tags { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .spacer    { margin-bottom: 1rem; }
+    .spacer-sm { margin-bottom: 0.65rem; }
+    .divider   { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+
+    /* ── Footer ──────────────────────────────────────────────── */
+    .site-footer {
+      border-top: 1px solid var(--border);
+      max-width: 1100px; margin: 0 auto;
+      padding: 1.25rem 1.5rem; font-size: 0.72rem; color: var(--text-3);
+      display: flex; justify-content: space-between;
+      align-items: center; gap: 1rem; flex-wrap: wrap;
+    }
+    .footer-brand { font-family: var(--mono); color: var(--accent); font-weight: 600; }
+
+    /* ── Responsive ──────────────────────────────────────────── */
+    @media (max-width: 720px) {
+      .row-2, .bench-grid { grid-template-columns: 1fr; }
+      .stats-bar { flex-wrap: wrap; }
+      .stat-item { min-width: 50%; border-right: none; border-bottom: 1px solid var(--border); }
+      .logo-primary { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────── -->
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-logo">
+      <span class="logo-primary">HQH-539</span>
+      <span class="logo-dot">·</span>
+      <span class="logo-secondary">Demonstration Engine</span>
+    </div>
+    <div class="header-sub">
+      <strong>539 Labs</strong> &nbsp;|&nbsp;
+      S²-11DM²ET-X Minimal Unification Core v1.5 &nbsp;|&nbsp;
+      T4121 Variant &nbsp;·&nbsp; 539 Steps &nbsp;·&nbsp; 100/100 PASS
+    </div>
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-label">Phase 2 Pipeline</span>
+        <span class="stat-value">9,225 cycles / hash</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">FPGA Fmax</span>
+        <span class="stat-value">101.6 MHz</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">SHA3-512 Cycle Ratio</span>
+        <span class="stat-value gold">329.5×</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Holographic Boundary</span>
+        <span class="stat-value purple">Step 18 · 61 ω-punctures</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">SCA Latency Variance</span>
+        <span class="stat-value green">Zero · M1 ✓</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ── Tab nav ─────────────────────────────────────────────────── -->
+<nav class="tab-nav" role="tablist">
+  <button class="tab-btn active" data-tab="hash">Hash</button>
+  <button class="tab-btn" data-tab="avalanche">Avalanche</button>
+  <button class="tab-btn" data-tab="encrypt">Encrypt / Decrypt</button>
+  <button class="tab-btn" data-tab="benchmarks">Benchmarks</button>
+</nav>
+
+<!-- ── Main ────────────────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- ── TAB: HASH ─────────────────────────────────────────────── -->
+  <div class="tab-pane active" id="tab-hash">
+    <div class="panel">
+      <div class="panel-title">Hash</div>
+      <div class="spacer-sm">
+        <label class="field-label" for="hash-message">Message</label>
+        <textarea id="hash-message" class="field" rows="3" placeholder="Enter any message…"></textarea>
+      </div>
+      <div class="flex-row spacer">
+        <div style="flex:0 0 180px;">
+          <label class="field-label" for="hash-mode">Mode</label>
+          <select id="hash-mode" class="field">
+            <option value="STD" selected>STD</option>
+            <option value="KDF">KDF</option>
+            <option value="SIG">SIG</option>
+          </select>
+        </div>
+        <div style="padding-top:1.35rem;">
+          <button id="hash-btn" class="btn-primary">Compute Hash</button>
+        </div>
+      </div>
+
+      <!-- hardware mode bar — hidden until XSim available -->
+      <div class="hw-mode-bar" id="hw-mode-bar">
+        <span class="hw-mode-label">Compute Engine</span>
+        <label class="hw-toggle-track">
+          <input type="checkbox" id="hw-toggle">
+          <span class="hw-toggle-thumb"></span>
+        </label>
+        <span id="hw-mode-text" class="hw-mode-text">Software Model</span>
+      </div>
+
+      <div id="hash-output" style="display:none;">
+        <div class="spacer-sm">
+          <label class="field-label">Digest (512-bit)</label>
+          <div id="hw-result-badge" style="display:none; margin-bottom:0.5rem;">
+            <span class="hw-badge">&#x26A1; Hardware Simulation &nbsp;&middot;&nbsp; XSim RTL</span>
+          </div>
+          <div class="hw-timing" id="hw-timing"></div>
+          <div class="hex-wrapper">
+            <div id="hash-digest" class="hex-box"></div>
+            <button class="copy-btn" data-copy="hash-digest">copy</button>
+          </div>
+        </div>
+        <div class="spacer-sm">
+          <div id="hash-trace-na">Bit-width trajectory not available in hardware simulation mode.</div>
+          <canvas id="hash-chart" height="110"></canvas>
+        </div>
+        <div class="flex-tags spacer-sm">
+          <span class="badge-phase">Steps 0–17: Holographic Entry Phase</span>
+          <span class="badge-phase gold">Steps 18–538: Master Tower Traversal</span>
+        </div>
+        <div style="font-size:0.72rem;color:var(--text-3);">
+          Yellow dashed line marks the 18-step holographic boundary (G₂-holonomy projection, 61 ω-punctures, 243 KK-towers).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB: AVALANCHE ────────────────────────────────────────── -->
+  <div class="tab-pane" id="tab-avalanche">
+    <div class="panel">
+      <div class="panel-title">Avalanche</div>
+      <div class="row-2 spacer">
+        <div>
+          <label class="field-label" for="av1">Original Message</label>
+          <input type="text" id="av1" class="field" value="539 Labs">
+        </div>
+        <div>
+          <label class="field-label" for="av2">Modified Message</label>
+          <input type="text" id="av2" class="field" value="539 Labs">
+        </div>
+      </div>
+      <div class="flex-row spacer">
+        <div style="flex:0 0 180px;">
+          <label class="field-label" for="av-mode">Mode</label>
+          <select id="av-mode" class="field">
+            <option value="STD" selected>STD</option>
+            <option value="KDF">KDF</option>
+            <option value="SIG">SIG</option>
+          </select>
+        </div>
+        <div style="padding-top:1.35rem;">
+          <button id="av-btn" class="btn-primary">Compare</button>
+        </div>
+      </div>
+
+      <div id="av-output" style="display:none;">
+        <div class="row-2 spacer">
+          <div>
+            <label class="field-label">Digest 1</label>
+            <div class="hex-wrapper">
+              <div id="av-d1" class="hex-box"></div>
+              <button class="copy-btn" data-copy="av-d1">copy</button>
+            </div>
+          </div>
+          <div>
+            <label class="field-label">Digest 2</label>
+            <div class="hex-wrapper">
+              <div id="av-d2" class="hex-box"></div>
+              <button class="copy-btn" data-copy="av-d2">copy</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="hamming-stat spacer">
+          <div>
+            <div class="hamming-label">Hamming Distance</div>
+            <div id="av-hamming" class="hamming-num good"></div>
+          </div>
+          <div>
+            <div class="hamming-label">Bit Flip Rate</div>
+            <div id="av-pct" class="hamming-pct"></div>
+          </div>
+          <div style="font-size:0.72rem;color:var(--text-3);max-width:220px;line-height:1.5;">
+            Ideal avalanche: 256 ± 40 bits (≈50%). Green = strong diffusion.
+          </div>
+        </div>
+
+        <div>
+          <label class="field-label">512-bit Difference Map
+            <span style="font-weight:400;text-transform:none;letter-spacing:0;">(red = flipped bit)</span>
+          </label>
+          <canvas id="av-canvas" width="416" height="208"
+            style="image-rendering:pixelated;border:1px solid var(--border);border-radius:6px;display:block;"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB: ENCRYPT / DECRYPT ──────────────────────────────── -->
+  <div class="tab-pane" id="tab-encrypt">
+    <div class="row-2">
+
+      <!-- Encrypt panel -->
+      <div class="panel">
+        <div class="panel-title">Encrypt</div>
+        <div class="spacer-sm">
+          <label class="field-label" for="enc-pt">Plaintext</label>
+          <textarea id="enc-pt" class="field" rows="4" placeholder="Hello 539 Labs"></textarea>
+        </div>
+        <div class="spacer">
+          <label class="field-label" for="enc-pw">Password</label>
+          <input type="text" id="enc-pw" class="field" value="test">
+        </div>
+        <button id="enc-btn" class="btn-primary">Encrypt</button>
+
+        <div id="enc-output" style="display:none;">
+          <hr class="divider">
+          <div class="spacer-sm">
+            <label class="field-label">Salt (hex)</label>
+            <div class="hex-wrapper">
+              <div id="enc-salt" class="hex-box"></div>
+              <button class="copy-btn" data-copy="enc-salt">copy</button>
+            </div>
+          </div>
+          <div class="spacer-sm">
+            <label class="field-label">Ciphertext (hex — includes 16-byte Poly1305 tag)</label>
+            <div class="hex-wrapper">
+              <div id="enc-ct" class="hex-box"></div>
+              <button class="copy-btn" data-copy="enc-ct">copy</button>
+            </div>
+          </div>
+          <div class="spacer-sm">
+            <div class="collapsible-header" id="keymat-toggle">
+              <span class="chevron">▶</span>
+              <span>Show Key Material</span>
+            </div>
+            <div class="collapsible-body" id="keymat-body">
+              <div style="margin-top:0.5rem;" class="spacer-sm">
+                <label class="field-label">KDF Key (32 bytes)</label>
+                <div id="enc-key" class="hex-box" style="font-size:0.72rem;"></div>
+              </div>
+              <div>
+                <label class="field-label">Nonce (12 bytes)</label>
+                <div id="enc-nonce" class="hex-box" style="font-size:0.72rem;"></div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:0.75rem;">
+            <button id="fill-decrypt-btn" class="btn-secondary">→ Send to Decrypt</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Decrypt panel -->
+      <div class="panel">
+        <div class="panel-title">Decrypt</div>
+        <div class="spacer-sm">
+          <label class="field-label" for="dec-ct">Ciphertext (hex)</label>
+          <textarea id="dec-ct" class="field" rows="4"></textarea>
+        </div>
+        <div class="spacer-sm">
+          <label class="field-label" for="dec-salt">Salt (hex)</label>
+          <input type="text" id="dec-salt" class="field">
+        </div>
+        <div class="spacer">
+          <label class="field-label" for="dec-pw">Password</label>
+          <input type="text" id="dec-pw" class="field">
+        </div>
+        <button id="dec-btn" class="btn-success">Decrypt</button>
+        <div id="dec-output" style="display:none;margin-top:1rem;font-family:var(--mono);font-size:0.82rem;"></div>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>Construction:</strong> HQH539-KDF (HKDF-style, §hqh539_kdf) → ChaCha20-Poly1305 (AEAD, RFC 8439).
+      44 bytes derived per encryption: 32-byte ChaCha20 key + 12-byte nonce. Random 32-byte salt per operation.
+      Wrong password or tampered ciphertext → MAC failure.<br>
+      <strong>KDF security:</strong> <span class="badge-b">Category B</span>
+      Proprietary framework claim (S²-11DM²ET-X v1.5) — not independently verified, pending external cryptanalysis.
+      &nbsp;<strong>AEAD security:</strong> <span class="badge-a">Category A</span> ChaCha20-Poly1305, RFC 8439.
+    </div>
+  </div>
+
+  <!-- ── TAB: BENCHMARKS ───────────────────────────────────────── -->
+  <div class="tab-pane" id="tab-benchmarks">
+    <div class="bench-grid">
+      <div class="bench-card">
+        <div class="bench-card-label">HQH-539 Cycles / Hash</div>
+        <div class="bench-card-main">9,225</div>
+        <div class="bench-card-sub">17 cycles/step × 539 steps + Phase 3</div>
+      </div>
+      <div class="bench-card">
+        <div class="bench-card-label">HQH-539 Latency @ 100 MHz</div>
+        <div class="bench-card-main">92.25 μs</div>
+        <div class="bench-card-sub">~10,840 H/s throughput</div>
+      </div>
+      <div class="bench-card">
+        <div class="bench-card-label">Cycle Ratio vs SHA3-512 FPGA</div>
+        <div class="bench-card-main gold">329.5×</div>
+        <div class="bench-card-sub">SHA3-512: 28 cycles / 0.280 μs @ 100 MHz</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Throughput Comparison (100 MHz)</div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>HQH-539 Full Pipeline</th>
+            <th>SHA3-512 FPGA</th>
+            <th>SHA3-512 CPU</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Cycles / hash</td>
+            <td>9,225</td>
+            <td>28</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td>Latency @ 100 MHz</td>
+            <td>92.25 μs</td>
+            <td>0.280 μs</td>
+            <td>0.948 μs</td>
+          </tr>
+          <tr>
+            <td>Throughput</td>
+            <td>~10,840 H/s</td>
+            <td>~3,571,429 H/s</td>
+            <td>~1,055,000 H/s</td>
+          </tr>
+          <tr>
+            <td>Simulation / Measured</td>
+            <td>100/100 PASS</td>
+            <td>10/10 PASS</td>
+            <td>measured</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="note" style="margin-top:0.75rem;">
+        Lower throughput is by design — the 539-step T4121 iteration is the security primitive.
+        HQH-539 post-route Fmax: 101.6 MHz (WNS +0.162 ns).
+        SHA3-512 FPGA Fmax estimate (synthesis, pre-route): ~370.5 MHz.
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:1rem;">
+      <div class="panel-title">SCA Status</div>
+      <table class="data-table">
+        <thead>
+          <tr><th>Property</th><th>Value</th><th>Cat.</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Latency variance</td>
+            <td>Zero (confirmed M1, 100/100 PASS)</td>
+            <td><span class="badge-a">A</span></td>
+          </tr>
+          <tr>
+            <td>Control flow</td>
+            <td>Constant-time — no data-dependent branches in T4121 RTL</td>
+            <td><span class="badge-a">A</span></td>
+          </tr>
+          <tr>
+            <td>Power/EM leakage</td>
+            <td>Unmitigated — hardware countermeasures pending</td>
+            <td><span class="badge-risk">Risk</span></td>
+          </tr>
+          <tr>
+            <td>TVLA validation</td>
+            <td>Planned — ChipWhisperer CW305</td>
+            <td><span class="badge-pending">Pending</span></td>
+          </tr>
+          <tr>
+            <td>DOM masking</td>
+            <td>Planned (Domain-Oriented Masking on intermediate states)</td>
+            <td><span class="badge-pending">Pending</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="note" style="margin-top:0.75rem;">
+        <strong>Category A</strong> = externally verifiable. &nbsp;
+        <strong>Category B</strong> = proprietary framework claim (S²-11DM²ET-X v1.5) — not independently verified, pending external cryptanalysis.
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── Footer ──────────────────────────────────────────────────── -->
+<footer class="site-footer">
+  <div>
+    <span class="footer-brand">539 Labs LLC</span> &nbsp;·&nbsp;
+    Chief Engineer: Truman Fuller (The Oracle) &nbsp;·&nbsp;
+    Ground model: Arvin B. Hampton (String Weaver)
+  </div>
+  <div style="text-align:right;">
+    All Category B claims: S²-11DM²ET-X v1.5 — not independently verified, pending external cryptanalysis.
+  </div>
+</footer>
+
+<script>
+  // ── Hardware mode state ───────────────────────────────────────
+  let xsimAvailable = false;
+  let hardwareModeActive = false;
+
+  // ── Phase boundary plugin ─────────────────────────────────────
+  const phaseBoundaryPlugin = {
+    id: 'phaseBoundary',
+    afterDraw(chart) {
+      const {ctx, chartArea, scales} = chart;
+      const x = scales.x.getPixelForValue(18);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(244, 196, 48, 0.85)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(x, chartArea.top);
+      ctx.lineTo(x, chartArea.bottom);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(244, 196, 48, 0.8)';
+      ctx.font = '10px JetBrains Mono, monospace';
+      ctx.fillText('← Entry | Tower →', x + 5, chartArea.top + 13);
+      ctx.restore();
+    }
+  };
+
+  // ── Tab system ───────────────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ── Copy buttons ─────────────────────────────────────────────
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.copy-btn');
+    if (!btn) return;
+    const el = document.getElementById(btn.dataset.copy);
+    if (!el) return;
+    navigator.clipboard.writeText(el.textContent).then(() => {
+      btn.textContent = '✓';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 1800);
+    });
+  });
+
+  // ── Collapsible key material ──────────────────────────────────
+  document.getElementById('keymat-toggle').addEventListener('click', function() {
+    const body = document.getElementById('keymat-body');
+    const open = body.classList.toggle('open');
+    this.classList.toggle('open', open);
+  });
+
+  // ── Hardware mode toggle ──────────────────────────────────────
+  document.getElementById('hw-toggle').addEventListener('change', async function() {
+    const wantHw = this.checked;
+    try {
+      const res = await fetch('/api/set_mode', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({mode: wantHw ? 'hardware' : 'software'})
+      });
+      const d = await res.json();
+      hardwareModeActive = d.mode === 'hardware';
+    } catch (e) {
+      hardwareModeActive = false;
+    }
+    this.checked = hardwareModeActive;
+    updateModeText(hardwareModeActive);
+  });
+
+  function updateModeText(hw) {
+    const el = document.getElementById('hw-mode-text');
+    el.textContent = hw ? 'Hardware Simulation' : 'Software Model';
+    el.classList.toggle('active', hw);
+  }
+
+  // ── Auto-sync av2 with av1 ────────────────────────────────────
+  document.getElementById('av1').addEventListener('input', function() {
+    document.getElementById('av2').value = this.value;
+  });
+
+  // ── Hash ─────────────────────────────────────────────────────
+  document.getElementById('hash-btn').addEventListener('click', async () => {
+    const btn  = document.getElementById('hash-btn');
+    const msg  = document.getElementById('hash-message').value || 'Enter any message...';
+    const mode = document.getElementById('hash-mode').value;
+
+    btn.disabled = true;
+    btn.textContent = hardwareModeActive
+      ? 'Simulating: 9,225 cycles @ 100 MHz…'
+      : 'Computing…';
+
+    try {
+      const res  = await fetch('/api/hash', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({message: msg, mode})
+      });
+      const data = await res.json();
+      if (!res.ok) { alert('Hash error: ' + (data.error || res.status)); return; }
+
+      document.getElementById('hash-digest').textContent = data.digest;
+
+      // Hardware badge
+      const badge = document.getElementById('hw-result-badge');
+      badge.style.display = data.hardware ? 'block' : 'none';
+
+      // Timing row
+      const timingEl = document.getElementById('hw-timing');
+      if (data.hardware && data.sim_us != null) {
+        timingEl.innerHTML =
+          'Simulated latency: <span>' + data.sim_us + ' μs</span> &nbsp;&middot;&nbsp; ' +
+          'Cycles: <span>' + data.sim_cycles.toLocaleString() + '</span> @ 100 MHz &nbsp;&middot;&nbsp; ' +
+          'Wall-clock: <span>' + (data.wall_ms / 1000).toFixed(2) + ' s</span>';
+        timingEl.classList.add('visible');
+      } else {
+        timingEl.classList.remove('visible');
+      }
+
+      document.getElementById('hash-output').style.display = 'block';
+
+      // Trace chart vs hardware placeholder
+      const traceNA     = document.getElementById('hash-trace-na');
+      const chartCanvas = document.getElementById('hash-chart');
+      if (!data.trace) {
+        traceNA.style.display = 'block';
+        chartCanvas.style.display = 'none';
+        if (window.hashChart) { window.hashChart.destroy(); window.hashChart = null; }
+      } else {
+        traceNA.style.display = 'none';
+        chartCanvas.style.display = '';
+        if (typeof Chart === 'undefined') return;
+        Chart.register(phaseBoundaryPlugin);
+        if (window.hashChart) window.hashChart.destroy();
+        window.hashChart = new Chart(chartCanvas, {
+          type: 'line',
+          data: {
+            labels: Array.from({length: 540}, (_, i) => i),
+            datasets: [{
+              label: 'State Bit Width',
+              data: data.trace,
+              borderColor: 'rgba(0, 212, 170, 0.9)',
+              backgroundColor: 'rgba(0, 212, 170, 0.04)',
+              borderWidth: 1.5,
+              tension: 0.25,
+              pointRadius: 0,
+              fill: true
+            }]
+          },
+          options: {
+            animation: {duration: 400},
+            scales: {
+              x: {
+                ticks: {color: '#58626b', font: {size: 11}, maxTicksLimit: 12},
+                grid:  {color: 'rgba(48,54,61,0.5)'},
+                title: {display: true, text: 'Step', color: '#58626b', font: {size: 11}}
+              },
+              y: {
+                ticks: {color: '#58626b', font: {size: 11}},
+                grid:  {color: 'rgba(48,54,61,0.5)'},
+                title: {display: true, text: 'State Bit Width', color: '#58626b', font: {size: 11}}
+              }
+            },
+            plugins: {
+              legend: {display: false},
+              tooltip: {
+                backgroundColor: '#0d1117',
+                borderColor: 'rgba(48,54,61,0.8)', borderWidth: 1,
+                titleColor: '#8b949e', bodyColor: '#00d4aa',
+                titleFont: {family: 'JetBrains Mono, monospace', size: 11},
+                bodyFont:  {family: 'JetBrains Mono, monospace', size: 11},
+                callbacks: {
+                  title: items => 'Step ' + items[0].label,
+                  label: item  => item.parsed.y + ' bits'
+                }
+              }
+            }
+          }
+        });
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Compute Hash';
+    }
+  });
+
+  // ── Avalanche ────────────────────────────────────────────────
+  document.getElementById('av-btn').addEventListener('click', async () => {
+    const m1   = document.getElementById('av1').value;
+    const m2   = document.getElementById('av2').value;
+    const mode = document.getElementById('av-mode').value;
+    const res  = await fetch('/api/avalanche', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message1: m1, message2: m2, mode})
+    });
+    const data = await res.json();
+
+    document.getElementById('av-d1').textContent = data.digest1;
+    document.getElementById('av-d2').textContent = data.digest2;
+
+    const hEl = document.getElementById('av-hamming');
+    const pEl = document.getElementById('av-pct');
+    hEl.textContent = data.hamming_distance;
+    pEl.textContent = data.pct + '% of 512 bits';
+    const isGood = data.hamming_distance >= 220 && data.hamming_distance <= 290;
+    hEl.className = 'hamming-num ' + (isGood ? 'good' : 'ok');
+
+    // Draw bit grid: 32 cols × 16 rows, 12px cell + 1px gap
+    const canvas = document.getElementById('av-canvas');
+    const ctx2   = canvas.getContext('2d');
+    const cell = 12, gap = 1;
+    ctx2.fillStyle = '#0a0d0f';
+    ctx2.fillRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < 512; i++) {
+      const col = i % 32;
+      const row = Math.floor(i / 32);
+      ctx2.fillStyle = data.bit_diff[i] ? '#ff4d6d' : '#1a2332';
+      ctx2.fillRect(col * (cell + gap), row * (cell + gap), cell, cell);
+    }
+    document.getElementById('av-output').style.display = 'block';
+  });
+
+  // ── Encrypt ──────────────────────────────────────────────────
+  document.getElementById('enc-btn').addEventListener('click', async () => {
+    try {
+      const pt = document.getElementById('enc-pt').value;
+      const pw = document.getElementById('enc-pw').value;
+      if (!pw) { alert('Enter a password before encrypting.'); return; }
+      const res = await fetch('/api/encrypt', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({plaintext: pt, password: pw})
+      });
+      if (!res.ok) throw new Error('Server error ' + res.status);
+      const data = await res.json();
+      document.getElementById('enc-salt').textContent  = data.salt;
+      document.getElementById('enc-ct').textContent    = data.ciphertext;
+      document.getElementById('enc-key').textContent   = data.kdf_key;
+      document.getElementById('enc-nonce').textContent = data.nonce;
+      document.getElementById('enc-output').style.display = 'block';
+    } catch (e) {
+      alert('Encrypt failed: ' + e.message);
+    }
+  });
+
+  // ── Auto-fill decrypt from encrypt ───────────────────────────
+  document.getElementById('fill-decrypt-btn').addEventListener('click', () => {
+    document.getElementById('dec-ct').value   = document.getElementById('enc-ct').textContent;
+    document.getElementById('dec-salt').value = document.getElementById('enc-salt').textContent;
+    document.getElementById('dec-pw').value   = document.getElementById('enc-pw').value;
+    document.getElementById('dec-output').style.display = 'none';
+  });
+
+  // ── Decrypt ──────────────────────────────────────────────────
+  document.getElementById('dec-btn').addEventListener('click', async () => {
+    const ct   = document.getElementById('dec-ct').value;
+    const salt = document.getElementById('dec-salt').value;
+    const pw   = document.getElementById('dec-pw').value;
+    const res  = await fetch('/api/decrypt', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ciphertext: ct, salt, password: pw})
+    });
+    const data = await res.json();
+    const out  = document.getElementById('dec-output');
+    if (data.ok) {
+      out.className = 'alert-success';
+      out.textContent = 'Plaintext: ' + data.plaintext;
+    } else {
+      out.className = 'alert-danger';
+      out.textContent = 'Error: ' + (data.error || 'Decryption failed');
+    }
+    out.style.display = 'block';
+  });
+
+  // ── Init ─────────────────────────────────────────────────────
+  window.addEventListener('load', () => {
+    document.getElementById('hash-message').value = '539 Labs';
+    document.getElementById('enc-pt').value       = 'Hello 539 Labs';
+
+    // Restore hardware mode state from Flask (no-op if XSim not available)
+    fetch('/api/get_mode')
+      .then(r => r.json())
+      .then(d => {
+        xsimAvailable = d.available;
+        hardwareModeActive = d.mode === 'hardware';
+        if (xsimAvailable) {
+          document.getElementById('hw-mode-bar').classList.add('visible');
+          const tog = document.getElementById('hw-toggle');
+          tog.checked = hardwareModeActive;
+          updateModeText(hardwareModeActive);
+        }
+      })
+      .catch(() => {}); // Vivado not present — silently ignore
+  });
+</script>
+</body>
+</html>

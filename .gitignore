@@ -1,0 +1,27 @@
+# Large vendor installers (exceeds GitHub 100MB limit)
+installers/
+*.exe
+
+# Vivado / simulation scratch
+.Xil/
+xsim_work/
+*.jou
+*.log
+*.pb
+*.wdb
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Everything Vivado
+vivado/
+.Xil/
+xsim_work/
+installers/
+*.xpr
+*.bit
+*.dcp
+*.jou
+*.str

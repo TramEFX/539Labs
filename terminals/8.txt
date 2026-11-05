@@ -1,0 +1,19 @@
+---
+pid: 29268
+cwd: "E:\539labs"
+command: "$env:HQH539_USE_XSIM=\"true\"; cd E:\\539Labs\\demo; python app.py"
+started_at: 2026-06-10T07:52:08.862Z
+running_for_ms: 13035012 
+---
+ * Serving Flask app 'app'
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead. * Debug mode: on
+
+ * Running on http://127.0.0.1:5391
+Press CTRL+C to quit
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 133-444-370
+ * Detected change in 'E:\\539Labs\\demo\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 133-444-370

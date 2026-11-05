@@ -1,0 +1,13 @@
+---
+pid: 33456
+cwd: "E:\539labs"
+command: "Get-NetTCPConnection -LocalPort 5391 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }; Start-Sleep -Seconds 2
+cmd /c \"E:\\539Labs\\demo\\_run_xsim_app.bat\""
+started_at: 2026-06-10T08:10:57.474Z
+running_for_ms: 11904987 
+---
+ * Serving Flask app 'app'
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead. * Debug mode: on
+
+ * Running on http://127.0.0.1:5391
+Press CTRL+C to quit

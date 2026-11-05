@@ -1,0 +1,16 @@
+---
+pid: 25756
+cwd: "E:\539labs"
+command: "python E:\\539Labs\\demo\\_run_xsim_flask.py"
+started_at: 2026-06-10T07:50:47.153Z
+running_for_ms: 13115012 
+---
+STARTUP XSIM_AVAILABLE = True
+ * Serving Flask app 'app'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5391
+Press CTRL+C to quit
+127.0.0.1 - - [10/Jun/2026 02:51:31] "POST /api/hash HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 02:51:33] "GET /api/get_mode HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jun/2026 02:51:35] "POST /api/set_mode HTTP/1.1" 200 -

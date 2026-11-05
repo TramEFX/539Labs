@@ -1,0 +1,164 @@
+// =============================================================================
+// hqh539_t3core.sv
+// HQH-539 Ã¢â‚¬â€ T3 Core Ã¢â‚¬â€ Phase 2 Isolation Module
+// Version 1.0 | 539 Labs LLC | June 4, 2026
+//
+// PURPOSE:
+//   Implements Phase 2 of HQH-539 in isolation:
+//     state_out = T3^539(seed_in)
+//
+//   Phase 1 (SHA3-512 seeding) and Phase 3 (SHA3-512 finalization) are
+//   intentionally excluded. This module is the novel contribution Ã¢â‚¬â€ T3
+//   iteration is what distinguishes HQH-539 from a pure SHA3 construction.
+//
+// WHY ISOLATED:
+//   Validates the T3 core independently of SHA3 wrapper before committing
+//   to a Phase 3 implementation strategy. Testbench vectors (expected_t3core.dat)
+//   are Python-derived T3^539 raw integer outputs, confirmed self-consistent.
+//
+// PIPELINE TIMING:
+//   Latency:  541 clock cycles from valid_in to valid_out
+//             (1 load cycle + 539 T3 iterations + 1 output cycle)
+//   Handshake: valid_in asserted for exactly 1 cycle to start a new hash.
+//              valid_out pulses for exactly 1 cycle when state_out is ready.
+//              valid_in must not be reasserted while running=1.
+//
+// STATE WIDTH NOTE:
+//   Python analysis confirms T3^539(seed) for 512-bit seeds produces states
+//   of 147Ã¢â‚¬â€œ237 bits (avg 196.2 bits). The 1024-bit register is a conservative
+//   safety margin. A future optimization could use 512-bit state after the
+//   first ~100 iterations once the trajectory has contracted sufficiently.
+//
+// TESTBENCH:
+//   tb_hqh539_pipeline.sv Ã¢â‚¬â€ checks all 100 STD-mode vectors against
+//   test_vectors/expected_t3core.dat (Python-derived reference).
+//
+// Author: 539 Labs LLC
+// Ground model: SÃ‚Â²-11DMÃ‚Â²ET-X Minimal Unification Core v1.5
+// =============================================================================
+
+`timescale 1ns / 1ps
+
+module hqh539_t3core #(
+// T4121 Variant â€” Adopted core map for HQH-539.
+// (4n+1)//3 for n â‰¡ 1 (mod 3). Empirically verified to 10^20.
+// SÂ²-11DMÂ²ET-X v1.5 â€” Proprietary framework claim, not independently verified.
+// Per Arvin B. Hampton, String Weaver. Ref: 539 Labs Notion / Section 8.
+    parameter STATE_W  = 1024,   // Internal state width
+    parameter DIGEST_W = 512,    // Input seed width (Phase 1 output)
+    parameter STEPS    = 539     // Exact T3 iteration count Ã¢â‚¬â€ DO NOT CHANGE
+) (
+    input  wire                clk,
+    input  wire                reset_n,      // Active-low synchronous reset
+
+    // Input handshake
+    input  wire                valid_in,     // Assert for one cycle to load seed_in
+    input  wire [DIGEST_W-1:0] seed_in,      // 512-bit seed: int(SHA3-512(msg||salt))
+
+    // Output handshake
+    output logic               valid_out,    // Pulses for one cycle when state_out ready
+    output logic [STATE_W-1:0] state_out     // T3^539(seed) Ã¢â‚¬â€ raw integer, no finalization
+);
+
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Internal state registers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    logic [STATE_W-1:0]  current_state;
+    logic [9:0]          step_counter;       // 10 bits: covers 0..539 (needs 10 bits for 539)
+    logic                running;
+
+    // === Hardware T3 Step (single div3_1024 instance) ===
+    // Per Architectural Mandate: exactly one div3_1024 per T3 iteration.
+    // r == 0 Ã¢â€ â€™ contraction (q)
+    // r == 1 Ã¢â€ â€™ expansion (4q + 2)
+    // r == 2 Ã¢â€ â€™ mild contraction (2q + 1)
+    // Post-division arithmetic uses only shifts and OR.
+
+    wire [1023:0] div_q;
+    wire [1:0]    div_r;
+
+    div3_1024 #(.N(1024)) u_div3_1024 (
+        .dividend (current_state),
+        .quotient (div_q),
+        .remainder(div_r)
+    );
+
+    logic [1023:0] next_state;
+
+    always_comb begin
+        case (div_r)
+            2'd0: next_state = div_q;                    // r == 0: contraction
+            2'd1: next_state = (div_q << 2) | 1'd1;      // r == 1: 4q + 1 (T4121)
+            2'd2: next_state = (div_q << 1) | 1'd1;      // r == 2: 2q + 1
+            default: next_state = '0;
+        endcase
+    end
+
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Main sequential logic Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    //
+    // State machine:
+    //   IDLE:    running=0. On valid_in: load seed, set step_counter=0, running=1.
+    //   RUNNING: Apply one T3 step per clock until step_counter == STEPS.
+    //   DONE:    step_counter == STEPS: output state, pulse valid_out, return IDLE.
+    //
+    // Cycle budget per hash:
+    //   Cycle 0  (valid_in):  Load seed Ã¢â€ â€™ current_state, running Ã¢â€ Â 1
+    //   Cycles 1..539:        T3 step applied, step_counter 0Ã¢â€ â€™539
+    //   Cycle 540:            step_counter == STEPS: latch state_out, valid_out Ã¢â€ Â 1
+    //   Cycle 541:            valid_out Ã¢â€ Â 0 (default clear), IDLE
+    //
+    always_ff @(posedge clk) begin
+        if (!reset_n) begin
+            step_counter  <= 10'd0;
+            current_state <= {STATE_W{1'b0}};
+            state_out     <= {STATE_W{1'b0}};
+            valid_out     <= 1'b0;
+            running       <= 1'b0;
+
+        end else begin
+            valid_out <= 1'b0;                       // Default: de-assert
+
+            if (valid_in && !running) begin
+                // Ã¢â€â‚¬Ã¢â€â‚¬ LOAD: zero-extend 512-bit seed to 1024-bit state Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+                current_state <= {{(STATE_W-DIGEST_W){1'b0}}, seed_in};
+                step_counter  <= 10'd0;
+                running       <= 1'b1;
+
+            end else if (running) begin
+                if (step_counter < STEPS) begin
+                    // Hardware T3 step (single div3_1024 instance)
+                    current_state <= next_state;
+                    step_counter  <= step_counter + 10'd1;
+
+                end else begin
+                    // Ã¢â€â‚¬Ã¢â€â‚¬ DONE: 539 steps complete Ã¢â‚¬â€ output and return to IDLE Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+                    state_out    <= current_state;   // Latch T3^539 state
+                    valid_out    <= 1'b1;            // One-cycle pulse
+                    running      <= 1'b0;
+                    step_counter <= 10'd0;
+                end
+            end
+            // else: IDLE, valid_in=0 Ã¢â‚¬â€ hold state, do nothing
+        end
+    end
+
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Assertions (simulation-time checks) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    // pragma translate_off
+    `ifndef SYNTHESIS
+    // Check: valid_in must not be asserted during a running computation
+    property no_valid_in_while_running;
+        @(posedge clk) disable iff (!reset_n)
+        running |-> !valid_in;
+    endproperty
+    assert property (no_valid_in_while_running)
+        else $warning("[HQH539_T3CORE] valid_in asserted while running=1; ignored per spec.");
+
+    // Check: step_counter never exceeds STEPS+1
+    property step_counter_bounded;
+        @(posedge clk) disable iff (!reset_n)
+        step_counter <= STEPS + 1;
+    endproperty
+    assert property (step_counter_bounded)
+        else $error("[HQH539_T3CORE] step_counter overflow: %0d", step_counter);
+    `endif
+    // pragma translate_on
+
+endmodule

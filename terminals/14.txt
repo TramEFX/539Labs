@@ -1,0 +1,12 @@
+---
+pid: 24788
+cwd: "E:\539labs"
+command: "$env:HQH539_USE_XSIM=\"true\"; python E:\\539Labs\\demo\\app.py"
+started_at: 2026-06-10T09:37:03.733Z
+running_for_ms: 6739999  
+---
+ * Serving Flask app 'app'
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead. * Debug mode: on
+
+ * Running on http://127.0.0.1:5391
+Press CTRL+C to quit

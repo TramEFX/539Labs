@@ -1,0 +1,15 @@
+---
+pid: 18696
+cwd: "E:\539labs"
+command: "cmd /c \"E:\\539Labs\\demo\\_run_xsim_flask.bat\""
+started_at: 2026-06-10T07:48:49.040Z
+running_for_ms: 13235003 
+---
+ * Serving Flask app 'app'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5391
+Press CTRL+C to quit
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 133-444-370
